@@ -1,4 +1,4 @@
-# DSA Visualizer 🚀
+# [WIP] DSA Visualizer 🚀
 
 An interactive, comprehensive Data Structures and Algorithms visualizer built with vanilla JavaScript. Explore sorting algorithms, searching techniques, pathfinding algorithms, tree operations, graph algorithms, dynamic programming, and data structures through beautiful, step-by-step animations.
 
