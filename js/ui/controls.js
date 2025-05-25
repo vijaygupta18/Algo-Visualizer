@@ -28,7 +28,6 @@ class UIControls {
         if (playPauseBtn) {
             playPauseBtn.addEventListener('click', () => {
                 this.app.togglePlayPause();
-                this.updatePlayPauseButton();
             });
         }
 
@@ -145,12 +144,10 @@ class UIControls {
                 case ' ':
                     e.preventDefault();
                     this.app.togglePlayPause();
-                    this.updatePlayPauseButton();
                     break;
                 case 'r':
                     e.preventDefault();
                     this.app.reset();
-                    this.updatePlayPauseButton();
                     break;
                 case 'arrowleft':
                     e.preventDefault();
@@ -179,6 +176,10 @@ class UIControls {
                     break;
             }
         });
+    }
+
+    notifyPlayPauseChange() {
+        this.updatePlayPauseButton();
     }
 
     updatePlayPauseButton() {

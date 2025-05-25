@@ -23,6 +23,7 @@ class AnimationController {
         this.onStatsUpdate = null;
         this.onComplete = null;
         this.onExplanationUpdate = null;
+        this.onPlayPauseChange = null;
     }
 
     // Test helper methods
@@ -114,6 +115,8 @@ class AnimationController {
         this.isCompleting = false;
         this.isExecuting = false;
         
+        this.notifyPlayPauseChange();
+        
         this.executeNextStep();
     }
 
@@ -182,6 +185,8 @@ class AnimationController {
             this.onComplete();
         }
         
+        this.notifyPlayPauseChange();
+        
         this.isCompleting = false;
     }
 
@@ -198,6 +203,8 @@ class AnimationController {
         this.isPlaying = false;
         this.isPaused = true;
         this.clearTimeout();
+        
+        this.notifyPlayPauseChange();
     }
 
     resume() {
@@ -213,6 +220,8 @@ class AnimationController {
             console.log('Resuming animation from step', this.currentStep);
             this.isPlaying = true;
             this.isPaused = false;
+            
+            this.notifyPlayPauseChange();
             
             // Clear any existing timeout
             this.clearTimeout();
@@ -825,6 +834,8 @@ class AnimationController {
         if (this.onComplete) {
             this.onComplete();
         }
+        
+        this.notifyPlayPauseChange();
     }
 
     executeVisit(step) {
@@ -1243,6 +1254,12 @@ class AnimationController {
     notifyStepChange() {
         if (this.onStepChange) {
             this.onStepChange(this.currentStep, this.steps.length);
+        }
+    }
+
+    notifyPlayPauseChange() {
+        if (this.onPlayPauseChange) {
+            this.onPlayPauseChange(this.isPlaying, this.isPaused);
         }
     }
 

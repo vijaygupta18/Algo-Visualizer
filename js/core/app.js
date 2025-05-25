@@ -19,6 +19,8 @@ class DSAVisualizerApp {
             swaps: 0,
             accesses: 0
         };
+        this.uiControls = null;
+        this.isPlaying = false;
 
         // Algorithm definitions
         this.algorithms = {
@@ -79,6 +81,7 @@ class DSAVisualizerApp {
         this.initializeCodeEditor();
         this.populateAlgorithmSelect();
         this.initializeOperationBox();
+        this.initializeUIControls();
         
         // Set up event listeners after components are initialized
         this.setupEventListeners();
@@ -89,6 +92,10 @@ class DSAVisualizerApp {
         
         // Update UI last
         this.updateUI();
+    }
+
+    initializeUIControls() {
+        this.uiControls = new UIControls(this);
     }
 
     setupEventListeners() {
@@ -193,6 +200,30 @@ class DSAVisualizerApp {
                 this.reset();
             }
         });
+
+        this.animationController.onComplete = () => {
+            console.log('Animation completed');
+            this.updatePlayButton();
+            document.getElementById('current-step-explanation').textContent = 'Algorithm completed! Click reset to run again.';
+            this.operationBox.updateOperation(
+                'Algorithm completed! 🎉',
+                'All numbers are now in the correct order. Click reset to try again!'
+            );
+        };
+
+        // Add this callback
+        this.animationController.onPlayPauseChange = (isPlaying, isPaused) => {
+            this.isPlaying = isPlaying;
+            if (this.uiControls && this.uiControls.notifyPlayPauseChange) {
+                this.uiControls.notifyPlayPauseChange();
+            } else {
+                console.warn('UIControls not initialized or missing notifyPlayPauseChange method during callback.');
+            }
+            this.updateUI();
+        };
+
+        // Reset animation state
+        this.reset();
     }
 
     initializeCodeEditor() {
@@ -498,16 +529,6 @@ class DSAVisualizerApp {
             }
         };
 
-        this.animationController.onComplete = () => {
-            console.log('Animation completed');
-            this.updatePlayButton();
-            document.getElementById('current-step-explanation').textContent = 'Algorithm completed! Click reset to run again.';
-            this.operationBox.updateOperation(
-                'Algorithm completed! 🎉',
-                'All numbers are now in the correct order. Click reset to try again!'
-            );
-        };
-
         // Reset animation state
         this.reset();
     }
@@ -681,8 +702,6 @@ class DSAVisualizerApp {
         } else {
             this.animationController.start();
         }
-
-        this.updatePlayButton();
     }
 
     pause() {
@@ -699,7 +718,6 @@ class DSAVisualizerApp {
 
         console.log('Pausing animation');
         this.animationController.pause();
-        this.updatePlayButton();
     }
 
     reset() {
@@ -733,7 +751,6 @@ class DSAVisualizerApp {
             this.operationBox.reset();
         }
 
-        this.updatePlayButton();
         this.updateStepInfo();
         this.updateStats();
 
@@ -775,7 +792,6 @@ class DSAVisualizerApp {
 
         // Start the animation
         this.animationController.start();
-        this.updatePlayButton();
     }
 
     generateAlgorithmSteps() {
