@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Visualizer - Interactive Algorithm Learning</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/animations.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-code-branch"></i>
+                    <h1>DSA Visualizer</h1>
+                </div>
+                <nav class="nav">
+                    <button class="nav-btn active" data-category="sorting">
+                        <i class="fas fa-sort"></i>
+                        Sorting
+                    </button>
+                    <button class="nav-btn" data-category="searching">
+                        <i class="fas fa-search"></i>
+                        Searching
+                    </button>
+                    <button class="nav-btn" data-category="pathfinding">
+                        <i class="fas fa-route"></i>
+                        Pathfinding
+                    </button>
+                    <button class="nav-btn" data-category="trees">
+                        <i class="fas fa-sitemap"></i>
+                        Trees
+                    </button>
+                    <button class="nav-btn" data-category="graphs">
+                        <i class="fas fa-project-diagram"></i>
+                        Graphs
+                    </button>
+                    <button class="nav-btn" data-category="dynamic">
+                        <i class="fas fa-table"></i>
+                        Dynamic Programming
+                    </button>
+                    <button class="nav-btn" data-category="data-structures">
+                        <i class="fas fa-layer-group"></i>
+                        Data Structures
+                    </button>
+                </nav>
+                <div class="header-controls">
+                    <button id="theme-toggle" class="icon-btn" title="Toggle Theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="help-btn" class="icon-btn" title="Help">
+                        <i class="fas fa-question-circle"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Algorithm Selection Panel -->
+            <div class="algorithm-panel">
+                <div class="algorithm-selector">
+                    <label for="algorithm-select">Choose Algorithm:</label>
+                    <select id="algorithm-select">
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+                <div class="input-controls">
+                    <div class="input-group">
+                        <label for="array-input">Input Data:</label>
+                        <input type="text" id="array-input" placeholder="Enter numbers separated by commas">
+                        <button id="random-btn" class="btn btn-secondary">Random</button>
+                    </div>
+                    <div class="input-group" id="search-target-group" style="display: none;">
+                        <label for="search-target">Search Target:</label>
+                        <input type="number" id="search-target" placeholder="Enter target value" value="10">
+                    </div>
+                    <div class="input-group">
+                        <label for="array-size">Array Size:</label>
+                        <input type="range" id="array-size" min="5" max="50" value="20">
+                        <span id="size-display">20</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization Area -->
+            <div class="visualization-container">
+                <div class="visualization-header">
+                    <h2 id="algorithm-title">Bubble Sort</h2>
+                    <div class="complexity-info">
+                        <span class="complexity time-complexity">
+                            <i class="fas fa-clock"></i>
+                            Time: <span id="time-complexity">O(n²)</span>
+                        </span>
+                        <span class="complexity space-complexity">
+                            <i class="fas fa-memory"></i>
+                            Space: <span id="space-complexity">O(1)</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="visualization-area">
+                    <canvas id="visualization-canvas"></canvas>
+                    <div id="visualization-svg"></div>
+                </div>
+
+                <!-- Animation Controls -->
+                <div class="controls">
+                    <button id="reset-btn" class="control-btn" title="Reset (R)">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button id="step-back-btn" class="control-btn" title="Step Back (←)">
+                        <i class="fas fa-step-backward"></i>
+                    </button>
+                    <button id="play-pause-btn" class="control-btn play" title="Play/Pause (Space)">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button id="step-forward-btn" class="control-btn" title="Step Forward (→)">
+                        <i class="fas fa-step-forward"></i>
+                    </button>
+                    <button id="fast-forward-btn" class="control-btn" title="Fast Forward (F)">
+                        <i class="fas fa-fast-forward"></i>
+                    </button>
+
+                    <div class="speed-control">
+                        <label for="speed-slider">Speed:</label>
+                        <input type="range" id="speed-slider" min="1" max="10" value="5">
+                        <span id="speed-display">5x</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code and Explanation Panel -->
+            <div class="info-panel">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="code">
+                        <i class="fas fa-code"></i>
+                        Code
+                    </button>
+                    <button class="tab-btn" data-tab="explanation">
+                        <i class="fas fa-info-circle"></i>
+                        Explanation
+                    </button>
+                    <button class="tab-btn" data-tab="complexity">
+                        <i class="fas fa-chart-line"></i>
+                        Analysis
+                    </button>
+                </div>
+
+                <div class="tab-content">
+                    <div id="code-tab" class="tab-pane active">
+                        <div class="code-container">
+                            <div class="code-header">
+                                <span class="code-language">JavaScript</span>
+                                <button id="copy-code-btn" class="icon-btn" title="Copy Code">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <textarea id="code-editor"></textarea>
+                        </div>
+                    </div>
+
+                    <div id="explanation-tab" class="tab-pane">
+                        <div class="explanation-content">
+                            <h3>Current Step</h3>
+                            <p id="current-step-explanation">Click play to start the algorithm visualization.</p>
+
+                            <h3>Algorithm Overview</h3>
+                            <div id="algorithm-overview">
+                                <p>Select an algorithm to see its explanation.</p>
+                            </div>
+
+                            <h3>Real-world Applications</h3>
+                            <ul id="applications-list">
+                                <li>Select an algorithm to see its applications.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div id="complexity-tab" class="tab-pane">
+                        <div class="complexity-analysis">
+                            <h3>Time Complexity</h3>
+                            <div class="complexity-chart">
+                                <div class="complexity-row">
+                                    <span class="case">Best Case:</span>
+                                    <span id="best-case" class="complexity-value">-</span>
+                                </div>
+                                <div class="complexity-row">
+                                    <span class="case">Average Case:</span>
+                                    <span id="average-case" class="complexity-value">-</span>
+                                </div>
+                                <div class="complexity-row">
+                                    <span class="case">Worst Case:</span>
+                                    <span id="worst-case" class="complexity-value">-</span>
+                                </div>
+                            </div>
+
+                            <h3>Space Complexity</h3>
+                            <div class="complexity-chart">
+                                <div class="complexity-row">
+                                    <span class="case">Space:</span>
+                                    <span id="space-case" class="complexity-value">-</span>
+                                </div>
+                            </div>
+
+                            <h3>Performance Characteristics</h3>
+                            <div id="performance-notes">
+                                <p>Select an algorithm to see its performance analysis.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Statistics Panel -->
+        <div class="stats-panel">
+            <div class="stat-item">
+                <span class="stat-label">Comparisons:</span>
+                <span id="comparisons-count" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Swaps:</span>
+                <span id="swaps-count" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Array Accesses:</span>
+                <span id="accesses-count" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Current Step:</span>
+                <span id="current-step" class="stat-value">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Help -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>DSA Visualizer Help</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>Keyboard Shortcuts</h3>
+                <ul>
+                    <li><kbd>Space</kbd> - Play/Pause animation</li>
+                    <li><kbd>R</kbd> - Reset algorithm</li>
+                    <li><kbd>←</kbd> - Step backward</li>
+                    <li><kbd>→</kbd> - Step forward</li>
+                    <li><kbd>F</kbd> - Fast forward</li>
+                    <li><kbd>T</kbd> - Toggle theme</li>
+                </ul>
+
+                <h3>How to Use</h3>
+                <ol>
+                    <li>Select a category from the navigation</li>
+                    <li>Choose an algorithm from the dropdown</li>
+                    <li>Enter custom data or use random generation</li>
+                    <li>Use controls to step through the algorithm</li>
+                    <li>View code and explanations in the side panel</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <script src="js/core/app.js"></script>
+    <script src="js/core/visualizer.js"></script>
+    <script src="js/core/animation.js"></script>
+    <script src="js/algorithms/sorting.js"></script>
+    <script src="js/algorithms/searching.js"></script>
+    <script src="js/algorithms/pathfinding.js"></script>
+    <script src="js/algorithms/trees.js"></script>
+    <script src="js/algorithms/graphs.js"></script>
+    <script src="js/algorithms/dynamic-programming.js"></script>
+    <script src="js/algorithms/data-structures.js"></script>
+    <script src="js/ui/controls.js"></script>
+    <script src="js/ui/theme.js"></script>
+    <script src="js/ui/modal.js"></script>
+    <script src="js/utils/helpers.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>
