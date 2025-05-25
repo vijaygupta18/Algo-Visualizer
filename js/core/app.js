@@ -233,6 +233,16 @@ class DSAVisualizerApp {
             btn.classList.toggle('active', btn.dataset.category === category);
         });
 
+        // Show/hide statistics panel based on category
+        const statsPanel = document.querySelector('.stats-panel');
+        if (statsPanel) {
+            if (category === 'sorting') {
+                statsPanel.style.display = 'flex';
+            } else {
+                statsPanel.style.display = 'none';
+            }
+        }
+
         // Show/hide input controls based on category
         this.updateInputControls(category);
 
@@ -402,10 +412,22 @@ class DSAVisualizerApp {
             case 'trees':
                 svg.style.display = 'block';
                 this.visualizer = new TreeVisualizer(svg);
+                // Initialize with sample tree data if no tree data exists
+                if (!this.treeData) {
+                    this.generateTreeData();
+                } else {
+                    this.visualizer.setTree(this.treeData);
+                }
                 break;
             case 'graphs':
                 svg.style.display = 'block';
                 this.visualizer = new GraphVisualizer(svg);
+                // Initialize with sample graph data if no graph data exists
+                if (!this.graphData) {
+                    this.generateGraphData();
+                } else {
+                    this.visualizer.setGraph(this.graphData);
+                }
                 break;
             case 'dynamic':
                 canvas.style.display = 'block';
@@ -672,7 +694,21 @@ class DSAVisualizerApp {
     reset() {
         this.currentStep = 0;
         this.totalSteps = 0;
-        this.stats = { comparisons: 0, swaps: 0, accesses: 0 };
+        
+        // Reset stats based on current category
+        if (this.currentCategory === 'sorting') {
+            this.stats = { comparisons: 0, swaps: 0, accesses: 0 };
+        } else {
+            // For other categories, initialize different relevant stats
+            this.stats = { 
+                visited: 0, 
+                explored: 0, 
+                operations: 0,
+                comparisons: 0, // Keep for tree search operations
+                swaps: 0, 
+                accesses: 0 
+            };
+        }
 
         if (this.animationController) {
             this.animationController.reset();
@@ -783,9 +819,15 @@ class DSAVisualizerApp {
     }
 
     updateStats() {
-        document.getElementById('comparisons-count').textContent = this.stats.comparisons;
-        document.getElementById('swaps-count').textContent = this.stats.swaps;
-        document.getElementById('accesses-count').textContent = this.stats.accesses;
+        // Only show sorting-specific stats for sorting algorithms
+        if (this.currentCategory === 'sorting') {
+            document.getElementById('comparisons-count').textContent = this.stats.comparisons;
+            document.getElementById('swaps-count').textContent = this.stats.swaps;
+            document.getElementById('accesses-count').textContent = this.stats.accesses;
+        } else {
+            // For other categories, we could show different relevant metrics
+            // For now, we hide the panel entirely in setCategory method
+        }
     }
 
     updateUI() {
@@ -937,53 +979,81 @@ class DSAVisualizerApp {
     }
 
     generateTreeData() {
-        const treeInput = document.getElementById('tree-input').value;
-        if (treeInput) {
-            try {
-                const values = treeInput.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v));
-                if (values.length > 0) {
-                    this.treeData = this.buildBST(values);
-                    if (this.visualizer && this.visualizer.setData) {
-                        this.visualizer.setData(this.treeData);
-                    }
-                    this.reset();
-                }
-            } catch (error) {
-                console.warn('Invalid tree input format');
+        const treeInput = document.getElementById('tree-input');
+        let inputValue = treeInput ? treeInput.value : '';
+        
+        // Use default values if no input provided
+        if (!inputValue) {
+            inputValue = '50,30,70,20,40,60,80';
+            if (treeInput) {
+                treeInput.value = inputValue;
             }
+        }
+        
+        try {
+            const values = inputValue.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+            if (values.length > 0) {
+                this.treeData = this.buildBST(values);
+                if (this.visualizer && this.visualizer.setTree) {
+                    this.visualizer.setTree(this.treeData);
+                }
+                this.reset();
+            }
+        } catch (error) {
+            console.warn('Invalid tree input format');
         }
     }
 
     buildBST(values) {
         if (values.length === 0) return null;
         
-        const root = { value: values[0], children: [] };
-        const queue = [root];
-        
-        for (let i = 1; i < values.length; i++) {
-            const value = values[i];
-            const newNode = { value: value, children: [] };
-            
-            // Simple BST insertion logic for visualization
-            let current = root;
-            while (true) {
-                if (value < current.value) {
-                    if (!current.children[0]) {
-                        current.children[0] = newNode;
-                        break;
-                    }
-                    current = current.children[0];
-                } else {
-                    if (!current.children[1]) {
-                        current.children[1] = newNode;
-                        break;
-                    }
-                    current = current.children[1];
-                }
+        class TreeNode {
+            constructor(value) {
+                this.value = value;
+                this.left = null;
+                this.right = null;
             }
         }
         
-        return root;
+        function insertNode(root, value) {
+            if (!root) {
+                return new TreeNode(value);
+            }
+            
+            if (value < root.value) {
+                root.left = insertNode(root.left, value);
+            } else if (value > root.value) {
+                root.right = insertNode(root.right, value);
+            }
+            // Ignore duplicates
+            
+            return root;
+        }
+        
+        function convertToD3Format(node) {
+            if (!node) return null;
+            
+            const d3Node = {
+                value: node.value,
+                children: []
+            };
+            
+            if (node.left) {
+                d3Node.children.push(convertToD3Format(node.left));
+            }
+            if (node.right) {
+                d3Node.children.push(convertToD3Format(node.right));
+            }
+            
+            return d3Node;
+        }
+        
+        let root = null;
+        for (const value of values) {
+            root = insertNode(root, value);
+        }
+        
+        return convertToD3Format(root);
     }
 
     generateGraphData() {
@@ -1071,8 +1141,8 @@ class DSAVisualizerApp {
         }
         
         this.graphData = graphData;
-        if (this.visualizer && this.visualizer.setData) {
-            this.visualizer.setData(graphData);
+        if (this.visualizer && this.visualizer.setGraph) {
+            this.visualizer.setGraph(graphData);
         }
         this.reset();
     }
