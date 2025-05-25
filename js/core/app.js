@@ -432,6 +432,7 @@ class DSAVisualizerApp {
             case 'dynamic':
                 canvas.style.display = 'block';
                 this.visualizer = new DPGridVisualizer(canvas);
+                // The DPGridVisualizer now initializes with sample data automatically
                 break;
             case 'data-structures':
                 svg.style.display = 'block';
@@ -440,14 +441,24 @@ class DSAVisualizerApp {
                 // Set the data structure type based on the current algorithm
                 if (this.currentAlgorithm) {
                     if (this.currentAlgorithm.includes('stack')) {
-                        this.visualizer.setData([10], 'stack');
+                        this.visualizer.setData([10, 20, 30], 'stack');
                     } else if (this.currentAlgorithm.includes('queue')) {
-                        this.visualizer.setData([10], 'queue');
+                        this.visualizer.setData([10, 20, 30], 'queue');
                     } else if (this.currentAlgorithm.includes('linked-list')) {
-                        this.visualizer.setData([10], 'linked-list');
+                        this.visualizer.setData([10, 20, 30], 'linked-list');
                     } else if (this.currentAlgorithm.includes('hash-table')) {
-                        this.visualizer.setData([{key: 'sample', value: 'data'}], 'hash-table');
+                        this.visualizer.setData([
+                            {key: 'apple', value: 5},
+                            {key: 'banana', value: 7},
+                            {key: 'cherry', value: 3}
+                        ], 'hash-table');
+                    } else {
+                        // Default to stack
+                        this.visualizer.setData([10, 20, 30], 'stack');
                     }
+                } else {
+                    // Default initialization
+                    this.visualizer.setData([10, 20, 30], 'stack');
                 }
                 break;
         }
@@ -1038,11 +1049,17 @@ class DSAVisualizerApp {
                 children: []
             };
             
+            // Add children in order: left first, then right
             if (node.left) {
                 d3Node.children.push(convertToD3Format(node.left));
             }
             if (node.right) {
                 d3Node.children.push(convertToD3Format(node.right));
+            }
+            
+            // If no children, remove the empty children array
+            if (d3Node.children.length === 0) {
+                delete d3Node.children;
             }
             
             return d3Node;
@@ -1053,29 +1070,32 @@ class DSAVisualizerApp {
             root = insertNode(root, value);
         }
         
-        return convertToD3Format(root);
+        const result = convertToD3Format(root);
+        console.log('Built tree structure:', result);
+        return result;
     }
 
     generateGraphData() {
-        const graphType = document.getElementById('graph-type').value;
+        const graphType = document.getElementById('graph-type');
+        const selectedType = graphType ? graphType.value : 'sample';
         let graphData = { nodes: [], links: [] };
         
-        switch (graphType) {
+        switch (selectedType) {
             case 'sample':
                 graphData = {
                     nodes: [
-                        { id: 'A', label: 'A' },
-                        { id: 'B', label: 'B' },
-                        { id: 'C', label: 'C' },
-                        { id: 'D', label: 'D' },
-                        { id: 'E', label: 'E' },
-                        { id: 'F', label: 'F' }
+                        { id: 'A', label: 'A', x: 150, y: 100 },
+                        { id: 'B', label: 'B', x: 350, y: 100 },
+                        { id: 'C', label: 'C', x: 550, y: 100 },
+                        { id: 'D', label: 'D', x: 250, y: 250 },
+                        { id: 'E', label: 'E', x: 450, y: 250 },
+                        { id: 'F', label: 'F', x: 350, y: 400 }
                     ],
                     links: [
                         { source: 'A', target: 'B', weight: 4 },
-                        { source: 'A', target: 'C', weight: 2 },
-                        { source: 'B', target: 'D', weight: 3 },
-                        { source: 'C', target: 'D', weight: 1 },
+                        { source: 'A', target: 'D', weight: 2 },
+                        { source: 'B', target: 'C', weight: 3 },
+                        { source: 'B', target: 'E', weight: 1 },
                         { source: 'C', target: 'E', weight: 5 },
                         { source: 'D', target: 'E', weight: 2 },
                         { source: 'D', target: 'F', weight: 6 },
@@ -1091,8 +1111,8 @@ class DSAVisualizerApp {
                         graphData.nodes.push({ 
                             id: `${i}-${j}`, 
                             label: `${i},${j}`,
-                            x: j * 100 + 100,
-                            y: i * 100 + 100
+                            x: j * 120 + 100,
+                            y: i * 120 + 100
                         });
                     }
                 }
@@ -1117,12 +1137,19 @@ class DSAVisualizerApp {
                 }
                 break;
             case 'random':
-                // Generate random graph
+                // Generate random graph with proper positioning
                 const numNodes = 6;
+                const centerX = 300;
+                const centerY = 250;
+                const radius = 150;
+                
                 for (let i = 0; i < numNodes; i++) {
+                    const angle = (i * 2 * Math.PI) / numNodes;
                     graphData.nodes.push({ 
                         id: String.fromCharCode(65 + i), 
-                        label: String.fromCharCode(65 + i) 
+                        label: String.fromCharCode(65 + i),
+                        x: centerX + radius * Math.cos(angle),
+                        y: centerY + radius * Math.sin(angle)
                     });
                 }
                 // Add random edges
@@ -1140,6 +1167,7 @@ class DSAVisualizerApp {
                 break;
         }
         
+        console.log('Generated graph data:', graphData);
         this.graphData = graphData;
         if (this.visualizer && this.visualizer.setGraph) {
             this.visualizer.setGraph(graphData);

@@ -422,52 +422,63 @@ class TreeVisualizer extends BaseVisualizer {
     render() {
         this.svg.selectAll('*').remove();
 
-        if (!this.tree) {
+        if (!this.tree || !this.tree.value) {
             this.drawEmptyState();
             return;
         }
 
-        // Create tree layout
-        const treeLayout = d3.tree()
-            .size([this.width - 100, this.height - 100]);
+        try {
+            console.log('Rendering tree:', this.tree);
+            
+            // Create tree layout
+            const treeLayout = d3.tree()
+                .size([this.width - 100, this.height - 100]);
 
-        const root = d3.hierarchy(this.tree);
-        treeLayout(root);
+            const root = d3.hierarchy(this.tree);
+            console.log('D3 hierarchy created:', root);
+            
+            treeLayout(root);
 
-        // Draw links
-        this.svg.selectAll('.link')
-            .data(root.links())
-            .enter()
-            .append('line')
-            .attr('class', 'link tree-edge')
-            .attr('x1', d => d.source.x + 50)
-            .attr('y1', d => d.source.y + 50)
-            .attr('x2', d => d.target.x + 50)
-            .attr('y2', d => d.target.y + 50)
-            .attr('stroke', '#cbd5e1')
-            .attr('stroke-width', 2);
+            // Draw links first (so they appear behind nodes)
+            const links = this.svg.selectAll('.link')
+                .data(root.links())
+                .enter()
+                .append('line')
+                .attr('class', 'link tree-edge')
+                .attr('x1', d => d.source.x + 50)
+                .attr('y1', d => d.source.y + 50)
+                .attr('x2', d => d.target.x + 50)
+                .attr('y2', d => d.target.y + 50);
 
-        // Draw nodes
-        const nodes = this.svg.selectAll('.node')
-            .data(root.descendants())
-            .enter()
-            .append('g')
-            .attr('class', 'node tree-node')
-            .attr('transform', d => `translate(${d.x + 50}, ${d.y + 50})`);
+            // Draw nodes
+            const nodes = this.svg.selectAll('.node')
+                .data(root.descendants())
+                .enter()
+                .append('g')
+                .attr('class', 'node tree-node')
+                .attr('transform', d => `translate(${d.x + 50}, ${d.y + 50})`);
 
-        nodes.append('circle')
-            .attr('r', this.nodeRadius)
-            .attr('fill', '#e2e8f0')
-            .attr('stroke', '#94a3b8')
-            .attr('stroke-width', 2);
+            nodes.append('circle')
+                .attr('r', this.nodeRadius);
 
-        nodes.append('text')
-            .attr('text-anchor', 'middle')
-            .attr('dy', '0.35em')
-            .attr('font-family', 'monospace')
-            .attr('font-size', '14px')
-            .attr('fill', '#1e293b')
-            .text(d => d.data.value);
+            nodes.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.35em')
+                .attr('font-family', 'monospace')
+                .attr('font-size', '14px')
+                .attr('font-weight', 'bold')
+                .attr('fill', '#1e293b')
+                .text(d => {
+                    console.log('Node data:', d.data);
+                    return d.data.value;
+                });
+
+            console.log('Tree rendered successfully with', root.descendants().length, 'nodes');
+
+        } catch (error) {
+            console.error('Error rendering tree:', error);
+            this.drawEmptyState();
+        }
     }
 
     drawEmptyState() {
@@ -533,15 +544,15 @@ class GraphVisualizer extends BaseVisualizer {
     }
 
     createDefaultGraph() {
-        // Create a sample graph
+        // Create a sample graph with proper positioning
         this.graph = {
             nodes: [
-                { id: 'A', x: 100, y: 100 },
-                { id: 'B', x: 300, y: 100 },
-                { id: 'C', x: 500, y: 100 },
-                { id: 'D', x: 200, y: 250 },
-                { id: 'E', x: 400, y: 250 },
-                { id: 'F', x: 300, y: 400 }
+                { id: 'A', x: 150, y: 100 },
+                { id: 'B', x: 350, y: 100 },
+                { id: 'C', x: 550, y: 100 },
+                { id: 'D', x: 250, y: 250 },
+                { id: 'E', x: 450, y: 250 },
+                { id: 'F', x: 350, y: 400 }
             ],
             links: [
                 { source: 'A', target: 'B', weight: 4 },
@@ -554,6 +565,7 @@ class GraphVisualizer extends BaseVisualizer {
                 { source: 'E', target: 'F', weight: 1 }
             ]
         };
+        console.log('Created default graph:', this.graph);
         this.render();
     }
 
@@ -565,55 +577,88 @@ class GraphVisualizer extends BaseVisualizer {
     render() {
         this.svg.selectAll('*').remove();
 
-        // Draw links
-        this.svg.selectAll('.link')
-            .data(this.graph.links)
-            .enter()
-            .append('line')
-            .attr('class', 'link graph-edge')
-            .attr('x1', d => this.getNodeById(d.source).x)
-            .attr('y1', d => this.getNodeById(d.source).y)
-            .attr('x2', d => this.getNodeById(d.target).x)
-            .attr('y2', d => this.getNodeById(d.target).y)
-            .attr('stroke', '#cbd5e1')
-            .attr('stroke-width', 2);
+        if (!this.graph || !this.graph.nodes || this.graph.nodes.length === 0) {
+            this.drawEmptyState();
+            return;
+        }
 
-        // Draw link weights
-        this.svg.selectAll('.weight')
-            .data(this.graph.links)
-            .enter()
-            .append('text')
-            .attr('class', 'weight')
-            .attr('x', d => (this.getNodeById(d.source).x + this.getNodeById(d.target).x) / 2)
-            .attr('y', d => (this.getNodeById(d.source).y + this.getNodeById(d.target).y) / 2)
-            .attr('text-anchor', 'middle')
-            .attr('font-size', '12px')
-            .attr('fill', '#64748b')
-            .attr('font-family', 'monospace')
-            .text(d => d.weight);
+        try {
+            console.log('Rendering graph:', this.graph);
+            
+            // Draw links first (so they appear behind nodes)
+            const links = this.svg.selectAll('.link')
+                .data(this.graph.links)
+                .enter()
+                .append('line')
+                .attr('class', 'link graph-edge')
+                .attr('x1', d => {
+                    const node = this.getNodeById(d.source);
+                    return node ? node.x : 0;
+                })
+                .attr('y1', d => {
+                    const node = this.getNodeById(d.source);
+                    return node ? node.y : 0;
+                })
+                .attr('x2', d => {
+                    const node = this.getNodeById(d.target);
+                    return node ? node.x : 0;
+                })
+                .attr('y2', d => {
+                    const node = this.getNodeById(d.target);
+                    return node ? node.y : 0;
+                });
 
-        // Draw nodes
-        const nodes = this.svg.selectAll('.node')
-            .data(this.graph.nodes)
-            .enter()
-            .append('g')
-            .attr('class', 'node graph-node')
-            .attr('transform', d => `translate(${d.x}, ${d.y})`);
+            // Draw link weights
+            const weights = this.svg.selectAll('.weight')
+                .data(this.graph.links)
+                .enter()
+                .append('text')
+                .attr('class', 'weight')
+                .attr('x', d => {
+                    const source = this.getNodeById(d.source);
+                    const target = this.getNodeById(d.target);
+                    return source && target ? (source.x + target.x) / 2 : 0;
+                })
+                .attr('y', d => {
+                    const source = this.getNodeById(d.source);
+                    const target = this.getNodeById(d.target);
+                    return source && target ? (source.y + target.y) / 2 : 0;
+                })
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px')
+                .attr('fill', '#64748b')
+                .attr('font-family', 'monospace')
+                .text(d => d.weight || '');
 
-        nodes.append('circle')
-            .attr('r', this.nodeRadius)
-            .attr('fill', '#e2e8f0')
-            .attr('stroke', '#94a3b8')
-            .attr('stroke-width', 2);
+            // Draw nodes
+            const nodes = this.svg.selectAll('.node')
+                .data(this.graph.nodes)
+                .enter()
+                .append('g')
+                .attr('class', 'node graph-node')
+                .attr('transform', d => {
+                    console.log('Node positioning:', d.id, 'at', d.x, d.y);
+                    return `translate(${d.x || 0}, ${d.y || 0})`;
+                });
 
-        nodes.append('text')
-            .attr('text-anchor', 'middle')
-            .attr('dy', '0.35em')
-            .attr('font-family', 'monospace')
-            .attr('font-size', '14px')
-            .attr('font-weight', 'bold')
-            .attr('fill', '#1e293b')
-            .text(d => d.id);
+            nodes.append('circle')
+                .attr('r', this.nodeRadius);
+
+            nodes.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.35em')
+                .attr('font-family', 'monospace')
+                .attr('font-size', '14px')
+                .attr('font-weight', 'bold')
+                .attr('fill', '#1e293b')
+                .text(d => d.id || d.label || '');
+
+            console.log('Graph rendered successfully with', this.graph.nodes.length, 'nodes and', this.graph.links.length, 'links');
+
+        } catch (error) {
+            console.error('Error rendering graph:', error);
+            this.drawEmptyState();
+        }
     }
 
     getNodeById(id) {
@@ -652,6 +697,16 @@ class GraphVisualizer extends BaseVisualizer {
             }, duration);
         });
     }
+
+    drawEmptyState() {
+        this.svg.append('text')
+            .attr('x', this.width / 2)
+            .attr('y', this.height / 2)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '16px')
+            .attr('fill', '#94a3b8')
+            .text('Graph will be displayed here');
+    }
 }
 
 // Data Structure Visualizer for stacks, queues, etc.
@@ -661,7 +716,7 @@ class DataStructureVisualizer extends BaseVisualizer {
         this.svg = d3.select(svgElement);
         this.width = 800;
         this.height = 600;
-        this.data = [];
+        this.data = [10, 20, 30]; // Initialize with sample data
         this.type = 'stack'; // stack, queue, linked-list, hash-table
         this.animations = [];
         
@@ -674,6 +729,7 @@ class DataStructureVisualizer extends BaseVisualizer {
         };
         
         this.init();
+        this.render(); // Render initial state
     }
 
     init() {
@@ -1221,13 +1277,14 @@ class DPGridVisualizer extends BaseVisualizer {
         super(canvas);
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.rows = 10;
-        this.cols = 10;
+        this.rows = 8;
+        this.cols = 8;
         this.cellSize = 40;
         this.grid = [];
 
         this.setupCanvas();
         this.initializeGrid();
+        this.addSampleData(); // Add sample data for demonstration
     }
 
     setupCanvas() {
@@ -1254,6 +1311,22 @@ class DPGridVisualizer extends BaseVisualizer {
                     isCalculated: false,
                     isOptimal: false
                 };
+            }
+        }
+        this.render();
+    }
+
+    addSampleData() {
+        // Add sample data for demonstration (Fibonacci-like pattern)
+        for (let i = 0; i < Math.min(5, this.rows); i++) {
+            for (let j = 0; j < Math.min(5, this.cols); j++) {
+                if (i === 0 || j === 0) {
+                    this.grid[i][j].value = 1;
+                    this.grid[i][j].isCalculated = true;
+                } else if (i <= 2 && j <= 2) {
+                    this.grid[i][j].value = this.grid[i-1][j].value + this.grid[i][j-1].value;
+                    this.grid[i][j].isCalculated = true;
+                }
             }
         }
         this.render();
