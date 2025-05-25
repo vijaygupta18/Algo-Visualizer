@@ -78,6 +78,7 @@ class DSAVisualizerApp {
         // Initialize components first
         this.initializeCodeEditor();
         this.populateAlgorithmSelect();
+        this.initializeOperationBox();
         
         // Set up event listeners after components are initialized
         this.setupEventListeners();
@@ -175,6 +176,23 @@ class DSAVisualizerApp {
                 this.reset();
             }
         });
+
+        // Tree input controls
+        document.getElementById('generate-tree-btn').addEventListener('click', () => {
+            this.generateTreeData();
+        });
+
+        // Graph input controls
+        document.getElementById('generate-graph-btn').addEventListener('click', () => {
+            this.generateGraphData();
+        });
+
+        // DP problem change
+        document.addEventListener('change', (e) => {
+            if (e.target.id === 'dp-problem') {
+                this.reset();
+            }
+        });
     }
 
     initializeCodeEditor() {
@@ -215,17 +233,128 @@ class DSAVisualizerApp {
             btn.classList.toggle('active', btn.dataset.category === category);
         });
 
-        // Show/hide search target input based on category
-        const searchTargetGroup = document.getElementById('search-target-group');
-        if (category === 'searching') {
-            searchTargetGroup.style.display = 'block';
-        } else {
-            searchTargetGroup.style.display = 'none';
-        }
+        // Show/hide input controls based on category
+        this.updateInputControls(category);
 
         this.populateAlgorithmSelect();
         this.initializeVisualizer();
         this.reset();
+    }
+
+    updateInputControls(category) {
+        // Hide all input groups first
+        const inputGroups = [
+            'search-target-group',
+            'tree-input-group', 
+            'graph-input-group',
+            'dp-input-group',
+            'ds-input-group'
+        ];
+        
+        inputGroups.forEach(groupId => {
+            const group = document.getElementById(groupId);
+            if (group) group.style.display = 'none';
+        });
+
+        // Show relevant input controls based on category
+        switch (category) {
+            case 'searching':
+                document.getElementById('search-target-group').style.display = 'block';
+                break;
+            case 'trees':
+                document.getElementById('tree-input-group').style.display = 'block';
+                break;
+            case 'graphs':
+                document.getElementById('graph-input-group').style.display = 'block';
+                break;
+            case 'dynamic':
+                document.getElementById('dp-input-group').style.display = 'block';
+                this.setupDPControls();
+                break;
+            case 'data-structures':
+                document.getElementById('ds-input-group').style.display = 'block';
+                this.setupDSControls();
+                break;
+            case 'pathfinding':
+                // Pathfinding uses the grid visualizer with built-in controls
+                break;
+            case 'sorting':
+            default:
+                // Sorting uses the default array input
+                break;
+        }
+    }
+
+    setupDPControls() {
+        const dpProblem = document.getElementById('dp-problem');
+        const dpParams = document.getElementById('dp-params');
+        
+        const updateDPParams = () => {
+            const problem = dpProblem.value;
+            let paramsHTML = '';
+            
+            switch (problem) {
+                case 'knapsack':
+                    paramsHTML = `
+                        <label>Items (weight,value):</label>
+                        <input type="text" id="knapsack-items" placeholder="(2,3),(3,4),(4,5),(5,6)" value="(2,3),(3,4),(4,5),(5,6)">
+                        <label>Capacity:</label>
+                        <input type="number" id="knapsack-capacity" value="8" min="1" max="20">
+                    `;
+                    break;
+                case 'lcs':
+                    paramsHTML = `
+                        <label>String 1:</label>
+                        <input type="text" id="lcs-string1" placeholder="ABCDGH" value="ABCDGH">
+                        <label>String 2:</label>
+                        <input type="text" id="lcs-string2" placeholder="AEDFHR" value="AEDFHR">
+                    `;
+                    break;
+                case 'edit-distance':
+                    paramsHTML = `
+                        <label>String 1:</label>
+                        <input type="text" id="edit-string1" placeholder="kitten" value="kitten">
+                        <label>String 2:</label>
+                        <input type="text" id="edit-string2" placeholder="sitting" value="sitting">
+                    `;
+                    break;
+                case 'coin-change':
+                    paramsHTML = `
+                        <label>Coins:</label>
+                        <input type="text" id="coin-denominations" placeholder="1,5,10,25" value="1,5,10,25">
+                        <label>Amount:</label>
+                        <input type="number" id="coin-amount" value="30" min="1" max="100">
+                    `;
+                    break;
+            }
+            
+            dpParams.innerHTML = paramsHTML;
+        };
+        
+        dpProblem.addEventListener('change', updateDPParams);
+        updateDPParams(); // Initialize
+    }
+
+    setupDSControls() {
+        const dsOperation = document.getElementById('ds-operation');
+        const dsValue = document.getElementById('ds-value');
+        const executeBtn = document.getElementById('execute-operation-btn');
+        
+        executeBtn.addEventListener('click', () => {
+            const operation = dsOperation.value;
+            const value = dsValue.value;
+            
+            if (this.visualizer && this.visualizer[operation]) {
+                if (operation === 'push' || operation === 'enqueue' || operation === 'insert') {
+                    if (value) {
+                        this.visualizer[operation](value);
+                        dsValue.value = '';
+                    }
+                } else {
+                    this.visualizer[operation]();
+                }
+            }
+        });
     }
 
     setAlgorithm(algorithmId) {
@@ -236,6 +365,18 @@ class DSAVisualizerApp {
         this.initializeVisualizer();
         this.updateAlgorithmInfo();
         this.reset();
+    }
+
+    initializeOperationBox() {
+        // Create container for operation box if it doesn't exist
+        let container = document.getElementById('operation-box-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'operation-box-container';
+            document.querySelector('.visualization-container').appendChild(container);
+        }
+        
+        this.operationBox = new OperationBox('operation-box-container');
     }
 
     initializeVisualizer() {
@@ -273,6 +414,19 @@ class DSAVisualizerApp {
             case 'data-structures':
                 svg.style.display = 'block';
                 this.visualizer = new DataStructureVisualizer(svg);
+                
+                // Set the data structure type based on the current algorithm
+                if (this.currentAlgorithm) {
+                    if (this.currentAlgorithm.includes('stack')) {
+                        this.visualizer.setData([10], 'stack');
+                    } else if (this.currentAlgorithm.includes('queue')) {
+                        this.visualizer.setData([10], 'queue');
+                    } else if (this.currentAlgorithm.includes('linked-list')) {
+                        this.visualizer.setData([10], 'linked-list');
+                    } else if (this.currentAlgorithm.includes('hash-table')) {
+                        this.visualizer.setData([{key: 'sample', value: 'data'}], 'hash-table');
+                    }
+                }
                 break;
         }
 
@@ -285,6 +439,7 @@ class DSAVisualizerApp {
             this.currentStep = step;
             this.totalSteps = total;
             this.updateStepInfo();
+            this.operationBox.updateStep(step, total);
         };
 
         this.animationController.onStatsUpdate = (stats) => {
@@ -293,17 +448,31 @@ class DSAVisualizerApp {
             if (stats.swaps) this.stats.swaps += stats.swaps;
             if (stats.accesses) this.stats.accesses += stats.accesses;
             this.updateStats();
+            this.operationBox.updateStats(this.stats);
         };
 
         this.animationController.onExplanationUpdate = (explanation) => {
             console.log('Explanation updated:', explanation);
             document.getElementById('current-step-explanation').textContent = explanation;
+            
+            // Update operation box with explanation
+            const currentStep = this.animationController.steps[this.currentStep];
+            if (currentStep) {
+                this.operationBox.updateOperation(
+                    currentStep.description,
+                    this.getStepExplanation(currentStep)
+                );
+            }
         };
 
         this.animationController.onComplete = () => {
             console.log('Animation completed');
             this.updatePlayButton();
             document.getElementById('current-step-explanation').textContent = 'Algorithm completed! Click reset to run again.';
+            this.operationBox.updateOperation(
+                'Algorithm completed! 🎉',
+                'All numbers are now in the correct order. Click reset to try again!'
+            );
         };
 
         // Reset animation state
@@ -511,6 +680,10 @@ class DSAVisualizerApp {
 
         if (this.visualizer && this.visualizer.reset) {
             this.visualizer.reset();
+        }
+
+        if (this.operationBox) {
+            this.operationBox.reset();
         }
 
         this.updatePlayButton();
@@ -744,6 +917,164 @@ class DSAVisualizerApp {
             notification.classList.remove('show');
             setTimeout(() => notification.remove(), 300);
         });
+    }
+
+    getStepExplanation(step) {
+        switch (step.type) {
+            case 'compare':
+                return `We're comparing these numbers to see which one is bigger. This helps us decide if we need to swap them.`;
+            case 'swap':
+                return `We need to swap these numbers because the bigger one should be on the right. This helps us sort the array.`;
+            case 'mark_sorted':
+                return `This number is now in its correct position! We don't need to move it anymore.`;
+            case 'init':
+                return `Let's start sorting! We'll compare numbers two at a time and swap them if needed.`;
+            case 'complete':
+                return `Great job! All the numbers are now in the correct order from smallest to biggest.`;
+            default:
+                return step.description || 'Processing...';
+        }
+    }
+
+    generateTreeData() {
+        const treeInput = document.getElementById('tree-input').value;
+        if (treeInput) {
+            try {
+                const values = treeInput.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+                if (values.length > 0) {
+                    this.treeData = this.buildBST(values);
+                    if (this.visualizer && this.visualizer.setData) {
+                        this.visualizer.setData(this.treeData);
+                    }
+                    this.reset();
+                }
+            } catch (error) {
+                console.warn('Invalid tree input format');
+            }
+        }
+    }
+
+    buildBST(values) {
+        if (values.length === 0) return null;
+        
+        const root = { value: values[0], children: [] };
+        const queue = [root];
+        
+        for (let i = 1; i < values.length; i++) {
+            const value = values[i];
+            const newNode = { value: value, children: [] };
+            
+            // Simple BST insertion logic for visualization
+            let current = root;
+            while (true) {
+                if (value < current.value) {
+                    if (!current.children[0]) {
+                        current.children[0] = newNode;
+                        break;
+                    }
+                    current = current.children[0];
+                } else {
+                    if (!current.children[1]) {
+                        current.children[1] = newNode;
+                        break;
+                    }
+                    current = current.children[1];
+                }
+            }
+        }
+        
+        return root;
+    }
+
+    generateGraphData() {
+        const graphType = document.getElementById('graph-type').value;
+        let graphData = { nodes: [], links: [] };
+        
+        switch (graphType) {
+            case 'sample':
+                graphData = {
+                    nodes: [
+                        { id: 'A', label: 'A' },
+                        { id: 'B', label: 'B' },
+                        { id: 'C', label: 'C' },
+                        { id: 'D', label: 'D' },
+                        { id: 'E', label: 'E' },
+                        { id: 'F', label: 'F' }
+                    ],
+                    links: [
+                        { source: 'A', target: 'B', weight: 4 },
+                        { source: 'A', target: 'C', weight: 2 },
+                        { source: 'B', target: 'D', weight: 3 },
+                        { source: 'C', target: 'D', weight: 1 },
+                        { source: 'C', target: 'E', weight: 5 },
+                        { source: 'D', target: 'E', weight: 2 },
+                        { source: 'D', target: 'F', weight: 6 },
+                        { source: 'E', target: 'F', weight: 1 }
+                    ]
+                };
+                break;
+            case 'grid':
+                // Generate a small grid graph
+                const gridSize = 4;
+                for (let i = 0; i < gridSize; i++) {
+                    for (let j = 0; j < gridSize; j++) {
+                        graphData.nodes.push({ 
+                            id: `${i}-${j}`, 
+                            label: `${i},${j}`,
+                            x: j * 100 + 100,
+                            y: i * 100 + 100
+                        });
+                    }
+                }
+                // Add edges
+                for (let i = 0; i < gridSize; i++) {
+                    for (let j = 0; j < gridSize; j++) {
+                        if (j < gridSize - 1) {
+                            graphData.links.push({ 
+                                source: `${i}-${j}`, 
+                                target: `${i}-${j + 1}`,
+                                weight: 1
+                            });
+                        }
+                        if (i < gridSize - 1) {
+                            graphData.links.push({ 
+                                source: `${i}-${j}`, 
+                                target: `${i + 1}-${j}`,
+                                weight: 1
+                            });
+                        }
+                    }
+                }
+                break;
+            case 'random':
+                // Generate random graph
+                const numNodes = 6;
+                for (let i = 0; i < numNodes; i++) {
+                    graphData.nodes.push({ 
+                        id: String.fromCharCode(65 + i), 
+                        label: String.fromCharCode(65 + i) 
+                    });
+                }
+                // Add random edges
+                for (let i = 0; i < numNodes; i++) {
+                    for (let j = i + 1; j < numNodes; j++) {
+                        if (Math.random() < 0.4) {
+                            graphData.links.push({
+                                source: String.fromCharCode(65 + i),
+                                target: String.fromCharCode(65 + j),
+                                weight: Math.floor(Math.random() * 10) + 1
+                            });
+                        }
+                    }
+                }
+                break;
+        }
+        
+        this.graphData = graphData;
+        if (this.visualizer && this.visualizer.setData) {
+            this.visualizer.setData(graphData);
+        }
+        this.reset();
     }
 }
 

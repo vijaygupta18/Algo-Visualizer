@@ -656,44 +656,99 @@ class GraphVisualizer extends BaseVisualizer {
 
 // Data Structure Visualizer for stacks, queues, etc.
 class DataStructureVisualizer extends BaseVisualizer {
-    constructor(svg) {
-        super(svg);
-        this.svg = d3.select(svg);
+    constructor(svgElement) {
+        super(svgElement);
+        this.svg = d3.select(svgElement);
         this.width = 800;
         this.height = 600;
-        this.structure = [];
-        this.type = 'stack'; // 'stack', 'queue', 'linked-list'
-
-        this.setupSVG();
+        this.data = [];
+        this.type = 'stack'; // stack, queue, linked-list, hash-table
+        this.animations = [];
+        
+        this.colors = {
+            default: '#3498db',
+            highlight: '#e74c3c',
+            new: '#2ecc71',
+            removed: '#e67e22',
+            pointer: '#9b59b6'
+        };
+        
+        this.init();
     }
 
-    setupSVG() {
-        const container = this.svg.node().parentElement;
-        const rect = container.getBoundingClientRect();
-
-        this.width = rect.width - 40;
-        this.height = rect.height - 40;
-
+    init() {
+        this.svg.selectAll("*").remove();
         this.svg
-            .attr('width', this.width)
-            .attr('height', this.height)
-            .attr('viewBox', `0 0 ${this.width} ${this.height}`);
+            .attr("width", this.width)
+            .attr("height", this.height)
+            .attr("viewBox", `0 0 ${this.width} ${this.height}`);
+
+        // Create groups for different elements
+        this.containerGroup = this.svg.append("g").attr("class", "containers");
+        this.elementGroup = this.svg.append("g").attr("class", "elements");
+        this.pointerGroup = this.svg.append("g").attr("class", "pointers");
+        this.labelGroup = this.svg.append("g").attr("class", "labels");
+        
+        // Add styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .ds-element {
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            .ds-element:hover {
+                transform: scale(1.05);
+            }
+            .ds-container {
+                stroke: #2c3e50;
+                stroke-width: 2;
+                fill: none;
+            }
+            .ds-text {
+                font-family: 'Arial', sans-serif;
+                font-size: 14px;
+                font-weight: bold;
+                text-anchor: middle;
+                dominant-baseline: central;
+                fill: white;
+                pointer-events: none;
+            }
+            .ds-label {
+                font-family: 'Comic Sans MS', cursive;
+                font-size: 12px;
+                fill: #2c3e50;
+                text-anchor: middle;
+            }
+            .ds-pointer {
+                stroke: #e74c3c;
+                stroke-width: 2;
+                fill: none;
+                marker-end: url(#arrowhead);
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Add arrow marker for pointers
+        const defs = this.svg.append("defs");
+        defs.append("marker")
+            .attr("id", "arrowhead")
+            .attr("markerWidth", 10)
+            .attr("markerHeight", 7)
+            .attr("refX", 9)
+            .attr("refY", 3.5)
+            .attr("orient", "auto")
+            .append("polygon")
+            .attr("points", "0 0, 10 3.5, 0 7")
+            .attr("fill", "#e74c3c");
     }
 
-    setStructureType(type) {
+    setData(data, type = 'stack') {
+        this.data = data || [];
         this.type = type;
-        this.structure = [];
-        this.render();
-    }
-
-    setData(data) {
-        this.structure = [...data];
         this.render();
     }
 
     render() {
-        this.svg.selectAll('*').remove();
-
         switch (this.type) {
             case 'stack':
                 this.renderStack();
@@ -704,234 +759,458 @@ class DataStructureVisualizer extends BaseVisualizer {
             case 'linked-list':
                 this.renderLinkedList();
                 break;
+            case 'hash-table':
+                this.renderHashTable();
+                break;
+            default:
+                this.renderStack();
         }
     }
 
     renderStack() {
-        const itemHeight = 40;
-        const itemWidth = 100;
-        const startX = this.width / 2 - itemWidth / 2;
-        const startY = this.height - 50;
+        const elementHeight = 50;
+        const elementWidth = 100;
+        const startX = this.width / 2 - elementWidth / 2;
+        const startY = this.height - 100;
+        
+        // Clear previous elements
+        this.elementGroup.selectAll("*").remove();
+        this.labelGroup.selectAll("*").remove();
+        
+        // Draw stack container
+        this.containerGroup.selectAll("*").remove();
+        this.containerGroup.append("rect")
+            .attr("class", "ds-container")
+            .attr("x", startX - 10)
+            .attr("y", startY - this.data.length * elementHeight - 10)
+            .attr("width", elementWidth + 20)
+            .attr("height", this.data.length * elementHeight + 20);
+        
+        // Draw elements
+        const elements = this.elementGroup
+            .selectAll(".ds-element")
+            .data(this.data);
 
-        this.structure.forEach((item, index) => {
-            const y = startY - (index * itemHeight);
+        const elementEnter = elements.enter()
+            .append("g")
+            .attr("class", "ds-element");
 
-            // Draw stack item
-            const group = this.svg.append('g')
-                .attr('class', 'stack-item')
-                .attr('transform', `translate(${startX}, ${y})`);
+        elementEnter.append("rect")
+            .attr("width", elementWidth)
+            .attr("height", elementHeight - 2)
+            .attr("fill", this.colors.default)
+            .attr("stroke", "#2c3e50")
+            .attr("stroke-width", 2);
 
-            group.append('rect')
-                .attr('width', itemWidth)
-                .attr('height', itemHeight - 2)
-                .attr('fill', '#e2e8f0')
-                .attr('stroke', '#94a3b8')
-                .attr('stroke-width', 2)
-                .attr('rx', 4);
+        elementEnter.append("text")
+            .attr("class", "ds-text")
+            .attr("x", elementWidth / 2)
+            .attr("y", elementHeight / 2)
+            .text(d => d.value || d);
 
-            group.append('text')
-                .attr('x', itemWidth / 2)
-                .attr('y', itemHeight / 2)
-                .attr('text-anchor', 'middle')
-                .attr('dy', '0.35em')
-                .attr('font-family', 'monospace')
-                .attr('font-size', '14px')
-                .attr('fill', '#1e293b')
-                .text(item);
-        });
+        // Add emoji for top element
+        elementEnter.append("text")
+            .attr("class", "ds-emoji")
+            .attr("x", elementWidth + 15)
+            .attr("y", elementHeight / 2)
+            .attr("font-size", "20px")
+            .attr("text-anchor", "middle")
+            .text((d, i) => i === this.data.length - 1 ? "👆" : "");
 
-        // Draw stack label
-        this.svg.append('text')
-            .attr('x', startX + itemWidth / 2)
-            .attr('y', 30)
-            .attr('text-anchor', 'middle')
-            .attr('font-size', '18px')
-            .attr('font-weight', 'bold')
-            .attr('fill', '#1e293b')
-            .text('Stack');
+        elements.merge(elementEnter)
+            .attr("transform", (d, i) => 
+                `translate(${startX}, ${startY - (i + 1) * elementHeight})`);
+
+        elements.exit().remove();
+        
+        // Add labels
+        this.labelGroup.append("text")
+            .attr("class", "ds-label")
+            .attr("x", this.width / 2)
+            .attr("y", 30)
+            .text("📚 Stack (LIFO - Last In, First Out)")
+            .style("font-size", "16px");
+        
+        if (this.data.length > 0) {
+            this.labelGroup.append("text")
+                .attr("class", "ds-label")
+                .attr("x", startX + elementWidth + 40)
+                .attr("y", startY - this.data.length * elementHeight + elementHeight / 2)
+                .text("← TOP");
+        }
     }
 
     renderQueue() {
-        const itemHeight = 40;
-        const itemWidth = 60;
-        const startX = 50;
-        const startY = this.height / 2 - itemHeight / 2;
+        const elementHeight = 50;
+        const elementWidth = 80;
+        const startX = 100;
+        const startY = this.height / 2 - elementHeight / 2;
+        
+        // Clear previous elements
+        this.elementGroup.selectAll("*").remove();
+        this.labelGroup.selectAll("*").remove();
+        this.pointerGroup.selectAll("*").remove();
+        
+        // Draw queue container
+        this.containerGroup.selectAll("*").remove();
+        this.containerGroup.append("rect")
+            .attr("class", "ds-container")
+            .attr("x", startX - 10)
+            .attr("y", startY - 10)
+            .attr("width", this.data.length * elementWidth + 20)
+            .attr("height", elementHeight + 20);
+        
+        // Draw elements
+        const elements = this.elementGroup
+            .selectAll(".ds-element")
+            .data(this.data);
 
-        this.structure.forEach((item, index) => {
-            const x = startX + (index * itemWidth);
+        const elementEnter = elements.enter()
+            .append("g")
+            .attr("class", "ds-element");
 
-            // Draw queue item
-            const group = this.svg.append('g')
-                .attr('class', 'queue-item')
-                .attr('transform', `translate(${x}, ${startY})`);
+        elementEnter.append("rect")
+            .attr("width", elementWidth - 2)
+            .attr("height", elementHeight)
+            .attr("fill", this.colors.default)
+            .attr("stroke", "#2c3e50")
+            .attr("stroke-width", 2);
 
-            group.append('rect')
-                .attr('width', itemWidth - 2)
-                .attr('height', itemHeight)
-                .attr('fill', '#e2e8f0')
-                .attr('stroke', '#94a3b8')
-                .attr('stroke-width', 2)
-                .attr('rx', 4);
+        elementEnter.append("text")
+            .attr("class", "ds-text")
+            .attr("x", elementWidth / 2)
+            .attr("y", elementHeight / 2)
+            .text(d => d.value || d);
 
-            group.append('text')
-                .attr('x', (itemWidth - 2) / 2)
-                .attr('y', itemHeight / 2)
-                .attr('text-anchor', 'middle')
-                .attr('dy', '0.35em')
-                .attr('font-family', 'monospace')
-                .attr('font-size', '14px')
-                .attr('fill', '#1e293b')
-                .text(item);
-        });
+        elements.merge(elementEnter)
+            .attr("transform", (d, i) => 
+                `translate(${startX + i * elementWidth}, ${startY})`);
 
-        // Draw queue labels
-        this.svg.append('text')
-            .attr('x', this.width / 2)
-            .attr('y', 30)
-            .attr('text-anchor', 'middle')
-            .attr('font-size', '18px')
-            .attr('font-weight', 'bold')
-            .attr('fill', '#1e293b')
-            .text('Queue');
-
-        if (this.structure.length > 0) {
+        elements.exit().remove();
+        
+        // Add labels and pointers
+        this.labelGroup.append("text")
+            .attr("class", "ds-label")
+            .attr("x", this.width / 2)
+            .attr("y", 30)
+            .text("🚶‍♂️ Queue (FIFO - First In, First Out)")
+            .style("font-size", "16px");
+        
+        if (this.data.length > 0) {
             // Front pointer
-            this.svg.append('text')
-                .attr('x', startX + itemWidth / 2)
-                .attr('y', startY - 10)
-                .attr('text-anchor', 'middle')
-                .attr('font-size', '12px')
-                .attr('fill', '#3b82f6')
-                .text('Front');
-
+            this.labelGroup.append("text")
+                .attr("class", "ds-label")
+                .attr("x", startX + elementWidth / 2)
+                .attr("y", startY - 20)
+                .text("FRONT 👈");
+            
             // Rear pointer
-            this.svg.append('text')
-                .attr('x', startX + (this.structure.length - 1) * itemWidth + itemWidth / 2)
-                .attr('y', startY + itemHeight + 20)
-                .attr('text-anchor', 'middle')
-                .attr('font-size', '12px')
-                .attr('fill', '#ef4444')
-                .text('Rear');
+            this.labelGroup.append("text")
+                .attr("class", "ds-label")
+                .attr("x", startX + (this.data.length - 1) * elementWidth + elementWidth / 2)
+                .attr("y", startY + elementHeight + 30)
+                .text("REAR 👈");
         }
     }
 
     renderLinkedList() {
         const nodeWidth = 80;
-        const nodeHeight = 40;
+        const nodeHeight = 50;
         const nodeSpacing = 120;
         const startX = 50;
         const startY = this.height / 2 - nodeHeight / 2;
+        
+        // Clear previous elements
+        this.elementGroup.selectAll("*").remove();
+        this.labelGroup.selectAll("*").remove();
+        this.pointerGroup.selectAll("*").remove();
+        this.containerGroup.selectAll("*").remove();
+        
+        // Draw nodes
+        const nodes = this.elementGroup
+            .selectAll(".ds-element")
+            .data(this.data);
 
-        this.structure.forEach((item, index) => {
-            const x = startX + (index * nodeSpacing);
+        const nodeEnter = nodes.enter()
+            .append("g")
+            .attr("class", "ds-element");
 
-            // Draw node
-            const group = this.svg.append('g')
-                .attr('class', 'list-node')
-                .attr('transform', `translate(${x}, ${startY})`);
+        // Data part
+        nodeEnter.append("rect")
+            .attr("width", nodeWidth * 0.7)
+            .attr("height", nodeHeight)
+            .attr("fill", this.colors.default)
+            .attr("stroke", "#2c3e50")
+            .attr("stroke-width", 2);
 
-            // Data part
-            group.append('rect')
-                .attr('width', nodeWidth * 0.7)
-                .attr('height', nodeHeight)
-                .attr('fill', '#e2e8f0')
-                .attr('stroke', '#94a3b8')
-                .attr('stroke-width', 2)
-                .attr('rx', 4);
+        // Pointer part
+        nodeEnter.append("rect")
+            .attr("x", nodeWidth * 0.7)
+            .attr("width", nodeWidth * 0.3)
+            .attr("height", nodeHeight)
+            .attr("fill", this.colors.pointer)
+            .attr("stroke", "#2c3e50")
+            .attr("stroke-width", 2);
 
-            // Pointer part
-            group.append('rect')
-                .attr('x', nodeWidth * 0.7)
-                .attr('width', nodeWidth * 0.3)
-                .attr('height', nodeHeight)
-                .attr('fill', '#f1f5f9')
-                .attr('stroke', '#94a3b8')
-                .attr('stroke-width', 2)
-                .attr('rx', 4);
+        nodeEnter.append("text")
+            .attr("class", "ds-text")
+            .attr("x", nodeWidth * 0.35)
+            .attr("y", nodeHeight / 2)
+            .text(d => d.value || d);
 
-            // Data text
-            group.append('text')
-                .attr('x', (nodeWidth * 0.7) / 2)
-                .attr('y', nodeHeight / 2)
-                .attr('text-anchor', 'middle')
-                .attr('dy', '0.35em')
-                .attr('font-family', 'monospace')
-                .attr('font-size', '14px')
-                .attr('fill', '#1e293b')
-                .text(item);
+        // Pointer arrow
+        nodeEnter.append("text")
+            .attr("class", "ds-text")
+            .attr("x", nodeWidth * 0.85)
+            .attr("y", nodeHeight / 2)
+            .attr("fill", "white")
+            .text("→");
 
-            // Pointer arrow
-            if (index < this.structure.length - 1) {
-                group.append('line')
-                    .attr('x1', nodeWidth)
-                    .attr('y1', nodeHeight / 2)
-                    .attr('x2', nodeSpacing - 10)
-                    .attr('y2', nodeHeight / 2)
-                    .attr('stroke', '#64748b')
-                    .attr('stroke-width', 2)
-                    .attr('marker-end', 'url(#arrowhead)');
-            } else {
-                // Null pointer
-                group.append('text')
-                    .attr('x', nodeWidth * 0.85)
-                    .attr('y', nodeHeight / 2)
-                    .attr('text-anchor', 'middle')
-                    .attr('dy', '0.35em')
-                    .attr('font-family', 'monospace')
-                    .attr('font-size', '10px')
-                    .attr('fill', '#ef4444')
-                    .text('∅');
-            }
-        });
+        nodes.merge(nodeEnter)
+            .attr("transform", (d, i) => 
+                `translate(${startX + i * nodeSpacing}, ${startY})`);
 
-        // Define arrow marker
-        const defs = this.svg.append('defs');
-        defs.append('marker')
-            .attr('id', 'arrowhead')
-            .attr('markerWidth', 10)
-            .attr('markerHeight', 7)
-            .attr('refX', 9)
-            .attr('refY', 3.5)
-            .attr('orient', 'auto')
-            .append('polygon')
-            .attr('points', '0 0, 10 3.5, 0 7')
-            .attr('fill', '#64748b');
-
-        // Draw title
-        this.svg.append('text')
-            .attr('x', this.width / 2)
-            .attr('y', 30)
-            .attr('text-anchor', 'middle')
-            .attr('font-size', '18px')
-            .attr('font-weight', 'bold')
-            .attr('fill', '#1e293b')
-            .text('Linked List');
+        nodes.exit().remove();
+        
+        // Draw pointer lines
+        this.pointerGroup.selectAll("*").remove();
+        for (let i = 0; i < this.data.length - 1; i++) {
+            this.pointerGroup.append("line")
+                .attr("class", "ds-pointer")
+                .attr("x1", startX + i * nodeSpacing + nodeWidth)
+                .attr("y1", startY + nodeHeight / 2)
+                .attr("x2", startX + (i + 1) * nodeSpacing)
+                .attr("y2", startY + nodeHeight / 2);
+        }
+        
+        // Add labels
+        this.labelGroup.append("text")
+            .attr("class", "ds-label")
+            .attr("x", this.width / 2)
+            .attr("y", 30)
+            .text("🔗 Linked List")
+            .style("font-size", "16px");
+        
+        if (this.data.length > 0) {
+            this.labelGroup.append("text")
+                .attr("class", "ds-label")
+                .attr("x", startX + nodeWidth / 2)
+                .attr("y", startY - 20)
+                .text("HEAD");
+            
+            // NULL pointer for last node
+            this.labelGroup.append("text")
+                .attr("class", "ds-label")
+                .attr("x", startX + (this.data.length - 1) * nodeSpacing + nodeWidth + 20)
+                .attr("y", startY + nodeHeight / 2)
+                .text("NULL");
+        }
     }
 
-    push(item) {
-        this.structure.push(item);
+    renderHashTable() {
+        const bucketWidth = 80;
+        const bucketHeight = 40;
+        const bucketsPerRow = 8;
+        const startX = 50;
+        const startY = 100;
+        
+        // Clear previous elements
+        this.elementGroup.selectAll("*").remove();
+        this.labelGroup.selectAll("*").remove();
+        this.containerGroup.selectAll("*").remove();
+        
+        // Create hash table structure (assuming 16 buckets)
+        const numBuckets = 16;
+        const buckets = Array(numBuckets).fill().map((_, i) => ({
+            index: i,
+            items: this.data.filter(item => this.hash(item.key || item) === i)
+        }));
+        
+        // Draw buckets
+        buckets.forEach((bucket, i) => {
+            const row = Math.floor(i / bucketsPerRow);
+            const col = i % bucketsPerRow;
+            const x = startX + col * (bucketWidth + 10);
+            const y = startY + row * (bucketHeight + 60);
+            
+            // Bucket container
+            this.containerGroup.append("rect")
+                .attr("class", "ds-container")
+                .attr("x", x)
+                .attr("y", y)
+                .attr("width", bucketWidth)
+                .attr("height", bucketHeight)
+                .attr("fill", bucket.items.length > 0 ? "#ecf0f1" : "#f8f9fa");
+            
+            // Bucket index
+            this.labelGroup.append("text")
+                .attr("class", "ds-label")
+                .attr("x", x + bucketWidth / 2)
+                .attr("y", y - 5)
+                .text(i.toString())
+                .style("font-weight", "bold");
+            
+            // Items in bucket (chaining)
+            bucket.items.forEach((item, itemIndex) => {
+                const itemGroup = this.elementGroup.append("g")
+                    .attr("class", "ds-element")
+                    .attr("transform", `translate(${x + 5}, ${y + bucketHeight + 10 + itemIndex * 25})`);
+                
+                itemGroup.append("rect")
+                    .attr("width", bucketWidth - 10)
+                    .attr("height", 20)
+                    .attr("fill", this.colors.default)
+                    .attr("stroke", "#2c3e50")
+                    .attr("stroke-width", 1);
+                
+                itemGroup.append("text")
+                    .attr("class", "ds-text")
+                    .attr("x", (bucketWidth - 10) / 2)
+                    .attr("y", 12)
+                    .attr("fill", "white")
+                    .style("font-size", "10px")
+                    .text(item.key || item);
+            });
+        });
+        
+        // Add labels
+        this.labelGroup.append("text")
+            .attr("class", "ds-label")
+            .attr("x", this.width / 2)
+            .attr("y", 30)
+            .text("🗂️ Hash Table (with Chaining)")
+            .style("font-size", "16px");
+    }
+
+    hash(key) {
+        // Simple hash function for demonstration
+        let hash = 0;
+        const str = key.toString();
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash + str.charCodeAt(i)) & 0xffffffff;
+        }
+        return Math.abs(hash) % 16;
+    }
+
+    highlight(index, state = 'highlight') {
+        this.elementGroup.selectAll(".ds-element")
+            .select("rect")
+            .attr("fill", (d, i) => i === index ? this.colors[state] : this.colors.default);
+    }
+
+    push(value) {
+        // Handle both direct calls and step-based calls
+        const actualValue = value?.value || value;
+        this.data.push(actualValue);
         this.render();
+        this.highlight(this.data.length - 1, 'new');
     }
 
     pop() {
-        const item = this.structure.pop();
-        this.render();
-        return item;
+        if (this.data.length > 0) {
+            this.highlight(this.data.length - 1, 'removed');
+            setTimeout(() => {
+                this.data.pop();
+                this.render();
+            }, 500);
+        }
     }
 
-    enqueue(item) {
-        this.structure.push(item);
+    enqueue(value) {
+        // Handle both direct calls and step-based calls
+        const actualValue = value?.value || value;
+        this.data.push(actualValue);
         this.render();
+        this.highlight(this.data.length - 1, 'new');
     }
 
     dequeue() {
-        const item = this.structure.shift();
+        if (this.data.length > 0) {
+            this.highlight(0, 'removed');
+            setTimeout(() => {
+                this.data.shift();
+                this.render();
+            }, 500);
+        }
+    }
+
+    peek() {
+        if (this.data.length > 0) {
+            // Highlight the top/front element based on data structure type
+            const index = this.type === 'queue' ? 0 : this.data.length - 1;
+            this.highlight(index, 'highlight');
+            
+            // Clear highlight after a brief moment
+            setTimeout(() => {
+                this.clearHighlights();
+            }, 1000);
+        }
+    }
+
+    insert(value, position = null) {
+        if (position !== null && position >= 0 && position <= this.data.length) {
+            this.data.splice(position, 0, value);
+        } else {
+            this.data.push(value);
+        }
         this.render();
-        return item;
+        this.highlight(position || this.data.length - 1, 'new');
+    }
+
+    remove(position) {
+        if (position >= 0 && position < this.data.length) {
+            this.highlight(position, 'removed');
+            setTimeout(() => {
+                this.data.splice(position, 1);
+                this.render();
+            }, 500);
+        }
+    }
+
+    clearHighlights() {
+        this.elementGroup.selectAll(".ds-element")
+            .select("rect")
+            .attr("fill", this.colors.default);
+    }
+
+    updateHighlights() {
+        // Re-render to update highlights
+        this.render();
+    }
+
+    // Method to update data from step information
+    updateFromStep(step) {
+        if (step.stack) {
+            this.data = [...step.stack];
+            this.type = 'stack';
+        } else if (step.queue) {
+            this.data = [...step.queue];
+            this.type = 'queue';
+        } else if (step.list) {
+            this.data = [...step.list];
+            this.type = 'linked-list';
+        } else if (step.hashTable) {
+            this.data = [...step.hashTable];
+            this.type = 'hash-table';
+        }
+        this.render();
     }
 
     reset() {
-        this.structure = [];
+        this.data = [];
+        this.render();
+    }
+
+    resize() {
+        const container = this.svg.node().parentElement;
+        this.width = container.clientWidth || 800;
+        this.height = container.clientHeight || 600;
+        
+        this.svg
+            .attr("width", this.width)
+            .attr("height", this.height)
+            .attr("viewBox", `0 0 ${this.width} ${this.height}`);
+        
         this.render();
     }
 }

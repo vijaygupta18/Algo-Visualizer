@@ -335,6 +335,9 @@ class AnimationController {
                 case 'dequeue':
                     this.executeDequeue(step);
                     break;
+                case 'peek':
+                    this.executePeek(step);
+                    break;
                 case 'clear_highlights':
                     this.executeClearHighlights(step);
                     break;
@@ -491,6 +494,52 @@ class AnimationController {
                 case 'try_coin':
                     this.executeTryCoin(step);
                     break;
+                case 'front':
+                    this.executeFront(step);
+                    break;
+                case 'insert_head':
+                    this.executeInsertHead(step);
+                    break;
+                case 'delete_node':
+                    this.executeDeleteNode(step);
+                    break;
+                case 'search_node':
+                    this.executeSearchNode(step);
+                    break;
+                case 'hash_insert':
+                    this.executeHashInsert(step);
+                    break;
+                case 'hash_search':
+                    this.executeHashSearch(step);
+                    break;
+                case 'hash_delete':
+                    this.executeHashDelete(step);
+                    break;
+                case 'pop_empty':
+                case 'dequeue_empty':
+                case 'peek_empty':
+                case 'front_empty':
+                case 'delete_empty':
+                case 'search_not_found':
+                case 'delete_not_found':
+                    this.executeEmptyOperation(step);
+                    break;
+                case 'insert_middle':
+                case 'delete_head':
+                case 'delete_middle':
+                case 'search_start':
+                case 'search_compare':
+                case 'search_found':
+                case 'hash_key':
+                case 'update':
+                case 'search_hash':
+                case 'delete_hash':
+                case 'delete_found':
+                    this.executeDataStructureOperation(step);
+                    break;
+                case 'clear_highlights':
+                    this.executeClearHighlights(step);
+                    break;
                 default:
                     console.warn(`Unknown step type: ${step.type}`);
             }
@@ -624,26 +673,96 @@ class AnimationController {
     }
 
     executePush(step) {
-        if (this.visualizer && this.visualizer.push) {
-            this.visualizer.push(step.value);
+        if (this.visualizer && this.visualizer.updateFromStep) {
+            this.visualizer.updateFromStep(step);
+        } else if (this.visualizer && this.visualizer.push) {
+            this.visualizer.push(step.value || step.pushedValue);
         }
     }
 
     executePop(step) {
-        if (this.visualizer && this.visualizer.pop) {
+        if (this.visualizer && this.visualizer.updateFromStep) {
+            this.visualizer.updateFromStep(step);
+        } else if (this.visualizer && this.visualizer.pop) {
             this.visualizer.pop();
         }
     }
 
     executeEnqueue(step) {
-        if (this.visualizer && this.visualizer.enqueue) {
-            this.visualizer.enqueue(step.value);
+        if (this.visualizer && this.visualizer.updateFromStep) {
+            this.visualizer.updateFromStep(step);
+        } else if (this.visualizer && this.visualizer.enqueue) {
+            this.visualizer.enqueue(step.value || step.enqueuedValue);
         }
     }
 
     executeDequeue(step) {
-        if (this.visualizer && this.visualizer.dequeue) {
+        if (this.visualizer && this.visualizer.updateFromStep) {
+            this.visualizer.updateFromStep(step);
+        } else if (this.visualizer && this.visualizer.dequeue) {
             this.visualizer.dequeue();
+        }
+    }
+
+    executePeek(step) {
+        if (this.visualizer && this.visualizer.updateFromStep) {
+            this.visualizer.updateFromStep(step);
+        }
+        if (this.visualizer && this.visualizer.peek) {
+            this.visualizer.peek();
+        } else if (this.visualizer && this.visualizer.highlight) {
+            // For visualizers that don't have a specific peek method,
+            // just highlight the top/front element briefly
+            const topIndex = this.visualizer.data ? this.visualizer.data.length - 1 : 0;
+            if (topIndex >= 0) {
+                this.visualizer.highlight([topIndex], 'current');
+            }
+        }
+    }
+
+    executeFront(step) {
+        if (this.visualizer && this.visualizer.updateFromStep) {
+            this.visualizer.updateFromStep(step);
+        }
+        if (this.visualizer && this.visualizer.peek) {
+            this.visualizer.peek(); // Front is similar to peek for queue
+        }
+    }
+
+    executeInsertHead(step) {
+        if (this.visualizer && this.visualizer.insert) {
+            this.visualizer.insert(step.insertedValue || step.value, 0);
+        }
+    }
+
+    executeDeleteNode(step) {
+        if (this.visualizer && this.visualizer.remove) {
+            this.visualizer.remove(step.position || 0);
+        }
+    }
+
+    executeSearchNode(step) {
+        if (this.visualizer && this.visualizer.highlight) {
+            this.visualizer.highlight([step.position || 0], 'found');
+        }
+    }
+
+    executeHashInsert(step) {
+        if (this.visualizer && this.visualizer.insert) {
+            this.visualizer.insert({ key: step.key, value: step.value });
+        }
+    }
+
+    executeHashSearch(step) {
+        if (this.visualizer && this.visualizer.highlight) {
+            // Highlight the bucket where the key would be found
+            this.visualizer.highlight([step.bucket || 0], 'found');
+        }
+    }
+
+    executeHashDelete(step) {
+        if (this.visualizer && this.visualizer.remove) {
+            this.visualizer.remove(step.position || 0);
         }
     }
 
@@ -657,8 +776,22 @@ class AnimationController {
         if (this.visualizer && this.visualizer.clearHighlights) {
             this.visualizer.clearHighlights();
         }
-        if (this.visualizer && this.visualizer.setData && step.array) {
-            this.visualizer.setData(step.array);
+        
+        // Handle data structure initialization
+        if (this.visualizer && this.visualizer.updateFromStep) {
+            this.visualizer.updateFromStep(step);
+        } else if (this.visualizer && this.visualizer.setData) {
+            if (step.array) {
+                this.visualizer.setData(step.array);
+            } else if (step.stack) {
+                this.visualizer.setData(step.stack, 'stack');
+            } else if (step.queue) {
+                this.visualizer.setData(step.queue, 'queue');
+            } else if (step.list) {
+                this.visualizer.setData(step.list, 'linked-list');
+            } else if (step.hashTable) {
+                this.visualizer.setData(step.hashTable, 'hash-table');
+            }
         }
     }
 
@@ -671,8 +804,22 @@ class AnimationController {
         if (this.visualizer && this.visualizer.clearHighlights) {
             this.visualizer.clearHighlights();
         }
-        if (step.array && this.visualizer && this.visualizer.setData) {
-            this.visualizer.setData(step.array);
+        
+        // Handle data structure completion
+        if (this.visualizer && this.visualizer.updateFromStep) {
+            this.visualizer.updateFromStep(step);
+        } else if (this.visualizer && this.visualizer.setData) {
+            if (step.array) {
+                this.visualizer.setData(step.array);
+            } else if (step.stack) {
+                this.visualizer.setData(step.stack, 'stack');
+            } else if (step.queue) {
+                this.visualizer.setData(step.queue, 'queue');
+            } else if (step.list) {
+                this.visualizer.setData(step.list, 'linked-list');
+            } else if (step.hashTable) {
+                this.visualizer.setData(step.hashTable, 'hash-table');
+            }
         }
 
         if (this.onComplete) {
@@ -1055,6 +1202,32 @@ class AnimationController {
     executeTryCoin(step) {
         // Try coin in coin change
         // No specific visualization needed
+    }
+
+    executeEmptyOperation(step) {
+        // Handle empty operations (like trying to pop from empty stack)
+        if (this.visualizer && this.visualizer.updateFromStep) {
+            this.visualizer.updateFromStep(step);
+        }
+        // No specific visualization needed for empty operations
+    }
+
+    executeDataStructureOperation(step) {
+        // Handle general data structure operations
+        if (this.visualizer && this.visualizer.updateFromStep) {
+            this.visualizer.updateFromStep(step);
+        }
+        
+        // Add specific highlighting for certain operations
+        if (step.type === 'search_found' || step.type === 'delete_found') {
+            if (this.visualizer && this.visualizer.highlight && step.position !== undefined) {
+                this.visualizer.highlight([step.position], 'found');
+            }
+        } else if (step.type === 'search_compare') {
+            if (this.visualizer && this.visualizer.highlight && step.position !== undefined) {
+                this.visualizer.highlight([step.position], 'comparing');
+            }
+        }
     }
 
     replayToCurrentStep() {

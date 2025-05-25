@@ -923,6 +923,7 @@ class LinkedList {
                 result = algorithm([
                     { type: 'enqueue', value: 10 },
                     { type: 'enqueue', value: 20 },
+                    { type: 'front' },
                     { type: 'dequeue' },
                     { type: 'enqueue', value: 30 }
                 ]);

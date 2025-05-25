@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/components.css">
     <link rel="stylesheet" href="styles/animations.css">
+    <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -82,6 +83,42 @@
                     <div class="input-group" id="search-target-group" style="display: none;">
                         <label for="search-target">Search Target:</label>
                         <input type="number" id="search-target" placeholder="Enter target value" value="10">
+                    </div>
+                    <div class="input-group" id="tree-input-group" style="display: none;">
+                        <label for="tree-input">Tree Values:</label>
+                        <input type="text" id="tree-input" placeholder="Enter values to insert: 50,30,70,20,40">
+                        <button id="generate-tree-btn" class="btn btn-secondary">Generate Tree</button>
+                    </div>
+                    <div class="input-group" id="graph-input-group" style="display: none;">
+                        <label for="graph-type">Graph Type:</label>
+                        <select id="graph-type">
+                            <option value="sample">Sample Graph</option>
+                            <option value="grid">Grid Graph</option>
+                            <option value="random">Random Graph</option>
+                        </select>
+                        <button id="generate-graph-btn" class="btn btn-secondary">Generate Graph</button>
+                    </div>
+                    <div class="input-group" id="dp-input-group" style="display: none;">
+                        <label for="dp-problem">Problem Setup:</label>
+                        <select id="dp-problem">
+                            <option value="knapsack">0/1 Knapsack</option>
+                            <option value="lcs">Longest Common Subsequence</option>
+                            <option value="edit-distance">Edit Distance</option>
+                            <option value="coin-change">Coin Change</option>
+                        </select>
+                        <div id="dp-params" style="margin-top: 10px;">
+                            <!-- Dynamic parameters will be added here -->
+                        </div>
+                    </div>
+                    <div class="input-group" id="ds-input-group" style="display: none;">
+                        <label for="ds-operation">Operation:</label>
+                        <select id="ds-operation">
+                            <option value="push">Push/Insert</option>
+                            <option value="pop">Pop/Remove</option>
+                            <option value="peek">Peek/Top</option>
+                        </select>
+                        <input type="text" id="ds-value" placeholder="Enter value">
+                        <button id="execute-operation-btn" class="btn btn-secondary">Execute</button>
                     </div>
                     <div class="input-group">
                         <label for="array-size">Array Size:</label>
@@ -278,9 +315,11 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
 
     <script src="js/core/app.js"></script>
+    <script src="js/core/components/operation-box.js"></script>
     <script src="js/core/visualizer.js"></script>
     <script src="js/core/animation.js"></script>
     <script src="js/algorithms/sorting.js"></script>
+    <script src="js/algorithms/sorting/bubble-sort.js"></script>
     <script src="js/algorithms/searching.js"></script>
     <script src="js/algorithms/pathfinding.js"></script>
     <script src="js/algorithms/trees.js"></script>
